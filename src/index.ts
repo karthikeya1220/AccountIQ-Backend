@@ -16,6 +16,7 @@ import budgetRoutes from './routes/budgets.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import sessionRoutes from './routes/sessions.routes';
 import { errorHandler } from './middleware/error.middleware';
+import initializeStorageBuckets from './db/storage-init';
 
 dotenv.config();
 
@@ -73,8 +74,14 @@ app.use((req: Request, res: Response) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
+// Initialize storage buckets
+initializeStorageBuckets().catch((error) => {
+  console.error('Storage initialization error:', error);
+});
+
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📡 API available at http://localhost:${PORT}/api`);
 });
 
 export default app;
