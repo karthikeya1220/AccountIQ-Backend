@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import session from 'express-session';
 import pinoHttp from 'pino-http';
 import dotenv from 'dotenv';
+import path from 'path';
 
 import authRoutes from './routes/auth.routes';
 import billRoutes from './routes/bills.routes';
@@ -18,7 +19,8 @@ import sessionRoutes from './routes/sessions.routes';
 import { errorHandler } from './middleware/error.middleware';
 import initializeStorageBuckets from './db/storage-init';
 
-dotenv.config();
+// Load environment variables from the backend directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app: Express = express();
 const PORT = process.env.BACKEND_PORT || 5000;

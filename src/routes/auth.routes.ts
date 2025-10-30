@@ -5,7 +5,6 @@ import { asyncHandler } from '../middleware/error.middleware';
 import { UserRole } from '../types';
 
 const router = Router();
-const supabase = getSupabaseClient();
 
 // Sign up (register new user)
 router.post(

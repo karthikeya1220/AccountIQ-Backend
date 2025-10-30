@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { supabaseAdmin } from '../db/supabase';
+import { supabaseAdmin, getSupabaseClient } from '../db/supabase';
 import { AuthPayload, UserRole } from '../types';
 
 declare global {
@@ -24,6 +24,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     }
 
     // Verify token with Supabase Auth
+    const token = authHeader.substring(7);
     const { data, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !data.user) {
@@ -91,8 +92,8 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
       return;
     }
 
-    const token = authHeader.substring(7);
-    const supabase = getSupabaseClient();
+  const token = authHeader.substring(7);
+  const supabase = getSupabaseClient(token);
     const { data, error } = await supabase.auth.getUser(token);
 
     if (!error && data.user) {
@@ -104,7 +105,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
 
       if (userData) {
         req.user = {
-          userId: data.user.id,
+          id: data.user.id,
           email: data.user.email || userData.email,
           role: (userData.role || 'user') as UserRole,
         } as AuthPayload;

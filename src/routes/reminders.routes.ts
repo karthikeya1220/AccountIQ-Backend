@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticate, isAdmin, AuthRequest } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
 import { RemindersService } from '../services/reminders.service';
-import { AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
 const remindersService = new RemindersService();

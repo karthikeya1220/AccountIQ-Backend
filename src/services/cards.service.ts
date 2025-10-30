@@ -44,11 +44,21 @@ export class CardsService {
   }
 
   static async createCard(data: any) {
+    // Support both camelCase and snake_case field names
+    const cardNumber = data.card_number || data.cardNumber;
+    const cardHolder = data.card_holder_name || data.card_holder || data.cardHolder;
+    const cardType = data.card_type || data.cardType || 'credit';
+    const issuer = data.issuer || data.bank || '';
+    const expiryDate = data.expiry_date || data.expiryDate || null;
+    const creditLimit = data.credit_limit || data.cardLimit || data.card_limit || 0;
+    const balance = data.balance || 0;
+    const isActive = data.is_active !== undefined ? data.is_active : (data.isActive !== undefined ? data.isActive : true);
+
     // Check if card number already exists
     const { data: existingCard } = await supabaseAdmin
       .from('cards')
       .select('id')
-      .eq('card_number', data.cardNumber)
+      .eq('card_number', cardNumber)
       .single();
     
     if (existingCard) {
@@ -56,14 +66,14 @@ export class CardsService {
     }
 
     const cardData = {
-      card_number: data.cardNumber,
-      card_holder: data.cardHolder,
-      card_type: data.cardType || 'credit',
-      bank: data.bank || '',
-      expiry_date: data.expiryDate || null,
-      card_limit: data.cardLimit || 0,
-      balance: data.balance || 0,
-      is_active: data.isActive !== undefined ? data.isActive : true,
+      card_number: cardNumber,
+      card_holder: cardHolder,
+      card_type: cardType,
+      bank: issuer,
+      expiry_date: expiryDate,
+      card_limit: creditLimit,
+      balance: balance,
+      is_active: isActive,
     };
 
     const { data: newCard, error } = await supabaseAdmin

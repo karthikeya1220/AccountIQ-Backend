@@ -46,25 +46,16 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     try {
       const cardData = createCardSchema.parse(req.body);
-      const card = await CardsService.createCard({
-        cardNumber: cardData.cardNumber,
-        cardHolder: cardData.cardHolder,
-        cardType: cardData.cardType,
-        bank: cardData.bank,
-        expiryDate: cardData.expiryDate,
-        cardLimit: cardData.limit || 0,
-        balance: 0,
-        isActive: true,
-      });
+      const card = await CardsService.createCard(cardData);
 
       res.status(201).json({
         success: true,
-        message: 'Card created successfully',
         data: card,
+        message: 'Card created successfully',
       });
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({ success: false, error: 'Validation failed', details: error.errors });
+        return res.status(400).json({ success: false, errors: error.errors });
       }
       throw error;
     }
@@ -118,19 +109,12 @@ router.delete(
   })
 );
 
-    res.json({
-      success: true,
-      message: 'Card deleted successfully',
-    });
-  })
-);
-
 // Get card statistics
 router.get(
   '/stats/summary',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const stats = await CardService.getCardStats(req.user!.userId);
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const stats = await CardsService.getCardStats();
     res.json({ success: true, data: stats });
   })
 );
