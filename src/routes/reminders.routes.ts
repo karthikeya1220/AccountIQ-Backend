@@ -1,33 +1,40 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
-import { ReminderService } from '../services';
-import { createReminderSchema, updateReminderSchema } from '../validators';
-import { ZodError } from 'zod';
+import { RemindersService } from '../services/reminders.service';
+import { AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
+const remindersService = new RemindersService();
+
+// Get upcoming reminders (must come before /:id to avoid route conflict)
+router.get(
+  '/upcoming/today',
+  authenticate,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { days } = req.query;
+    const reminders = await remindersService.getUpcomingReminders(
+      days ? parseInt(days as string) : 7
+    );
+    res.json(reminders);
+  })
+);
 
 // Get all reminders
 router.get(
   '/',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const filters = {
-        startDate: req.query.startDate as string,
-        endDate: req.query.endDate as string,
-        type: req.query.type as string,
-      };
-
-      const reminders = await ReminderService.getReminders(req.user!.userId, filters);
-
-      res.json({
-        success: true,
-        data: reminders,
-      });
-    } catch (error) {
-      throw error;
-    }
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { type, isActive, startDate, endDate } = req.query;
+    
+    const reminders = await remindersService.getAllReminders({
+      type: type as string,
+      isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
+      startDate: startDate as string,
+      endDate: endDate as string,
+    });
+    
+    res.json(reminders);
   })
 );
 
@@ -35,22 +42,10 @@ router.get(
 router.post(
   '/',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const reminderData = createReminderSchema.parse(req.body);
-      const reminder = await ReminderService.createReminder(reminderData, req.user!.userId);
-
-      res.status(201).json({
-        success: true,
-        message: 'Reminder created successfully',
-        data: reminder,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ success: false, error: 'Validation failed', details: error.errors });
-      }
-      throw error;
-    }
+  isAdmin,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const reminder = await remindersService.createReminder(req.body);
+    res.status(201).json(reminder);
   })
 );
 
@@ -58,15 +53,9 @@ router.post(
 router.get(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const reminder = await ReminderService.getReminderById(id, req.user!.userId);
-
-    if (!reminder) {
-      return res.status(404).json({ success: false, error: 'Reminder not found' });
-    }
-
-    res.json({ success: true, data: reminder });
+  asyncHandler(async (req: AuthRequest, res) => {
+    const reminder = await remindersService.getReminderById(req.params.id);
+    res.json(reminder);
   })
 );
 
@@ -74,23 +63,10 @@ router.get(
 router.put(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const reminderData = updateReminderSchema.parse(req.body);
-      const reminder = await ReminderService.updateReminder(id, reminderData, req.user!.userId);
-
-      res.json({
-        success: true,
-        message: 'Reminder updated successfully',
-        data: reminder,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ success: false, error: 'Validation failed', details: error.errors });
-      }
-      throw error;
-    }
+  isAdmin,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const reminder = await remindersService.updateReminder(req.params.id, req.body);
+    res.json(reminder);
   })
 );
 
@@ -98,45 +74,10 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    await ReminderService.deleteReminder(id, req.user!.userId);
-
-    res.json({
-      success: true,
-      message: 'Reminder deleted successfully',
-    });
-  })
-);
-
-// Get upcoming reminders
-router.get(
-  '/upcoming/next-days',
-  authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const days = req.query.days ? parseInt(req.query.days as string) : 7;
-    const reminders = await ReminderService.getUpcomingReminders(days);
-
-    res.json({
-      success: true,
-      data: reminders,
-    });
-  })
-);
-
-// Mark reminder as sent
-router.put(
-  '/:id/mark-sent',
-  authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const reminder = await ReminderService.markReminderAsSent(id);
-
-    res.json({
-      success: true,
-      message: 'Reminder marked as sent',
-      data: reminder,
-    });
+  isAdmin,
+  asyncHandler(async (req: AuthRequest, res) => {
+    await remindersService.deleteReminder(req.params.id);
+    res.json({ message: 'Reminder deleted successfully' });
   })
 );
 

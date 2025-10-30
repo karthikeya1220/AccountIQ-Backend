@@ -1,125 +1,18 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
-import { SalaryService } from '../services';
-import { createSalarySchema, updateSalarySchema } from '../validators';
-import { ZodError } from 'zod';
+import { SalaryService } from '../services/salary.service';
+import { AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
+const salaryService = new SalaryService();
 
-// Get all salaries
-router.get(
-  '/',
-  authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const filters = {
-        employeeId: req.query.employeeId as string,
-        startDate: req.query.startDate as string,
-        endDate: req.query.endDate as string,
-        status: req.query.status as string,
-      };
-
-      const salaries = await SalaryService.getSalaries(filters);
-      const stats = await SalaryService.getSalaryStats();
-
-      res.json({
-        success: true,
-        data: salaries,
-        stats,
-      });
-    } catch (error) {
-      throw error;
-    }
-  })
-);
-
-// Create salary
-router.post(
-  '/',
-  authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const salaryData = createSalarySchema.parse(req.body);
-      const salary = await SalaryService.createSalary(salaryData, req.user!.userId);
-
-      res.status(201).json({
-        success: true,
-        message: 'Salary created successfully',
-        data: salary,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ success: false, error: 'Validation failed', details: error.errors });
-      }
-      throw error;
-    }
-  })
-);
-
-// Get salary by ID
-router.get(
-  '/:id',
-  authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const salary = await SalaryService.getSalaryById(id);
-
-    if (!salary) {
-      return res.status(404).json({ success: false, error: 'Salary not found' });
-    }
-
-    res.json({ success: true, data: salary });
-  })
-);
-
-// Update salary
-router.put(
-  '/:id',
-  authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const salaryData = updateSalarySchema.parse(req.body);
-      const salary = await SalaryService.updateSalary(id, salaryData);
-
-      res.json({
-        success: true,
-        message: 'Salary updated successfully',
-        data: salary,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ success: false, error: 'Validation failed', details: error.errors });
-      }
-      throw error;
-    }
-  })
-);
-
-// Delete salary
-router.delete(
-  '/:id',
-  authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    await SalaryService.deleteSalary(id);
-
-    res.json({
-      success: true,
-      message: 'Salary deleted successfully',
-    });
-  })
-);
-
-// Get employee salary history
+// Get employee salary history (must come before /:id to avoid route conflict)
 router.get(
   '/employee/:employeeId',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const { employeeId } = req.params;
-    const salaries = await SalaryService.getSalaries({ employeeId });
-
+  asyncHandler(async (req: AuthRequest, res) => {
+    const salaries = await salaryService.getEmployeeSalaryHistory(req.params.employeeId);
     res.json({
       success: true,
       data: salaries,
@@ -127,13 +20,64 @@ router.get(
   })
 );
 
-// Get salary statistics
+// Get all salaries
 router.get(
-  '/stats/summary',
+  '/',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const stats = await SalaryService.getSalaryStats();
-    res.json({ success: true, data: stats });
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { employeeId, month, status } = req.query;
+    
+    const salaries = await salaryService.getAllSalaries({
+      employeeId: employeeId as string,
+      month: month as string,
+      status: status as string,
+    });
+    
+    res.json({
+      success: true,
+      data: salaries,
+    });
+  })
+);
+
+// Create salary
+router.post(
+  '/',
+  authenticate,
+  isAdmin,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const salary = await salaryService.createSalary(req.body);
+    res.status(201).json({
+      success: true,
+      data: salary,
+    });
+  })
+);
+
+// Get salary by ID
+router.get(
+  '/:id',
+  authenticate,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const salary = await salaryService.getSalaryById(req.params.id);
+    res.json({
+      success: true,
+      data: salary,
+    });
+  })
+);
+
+// Update salary
+router.put(
+  '/:id',
+  authenticate,
+  isAdmin,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const salary = await salaryService.updateSalary(req.params.id, req.body);
+    res.json({
+      success: true,
+      data: salary,
+    });
   })
 );
 
@@ -141,16 +85,11 @@ router.get(
 router.put(
   '/:id/mark-paid',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const salary = await SalaryService.updateSalary(id, {
-      payment_status: 'paid',
-      payment_date: new Date().toISOString(),
-    });
-
+  isAdmin,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const salary = await salaryService.markAsPaid(req.params.id);
     res.json({
       success: true,
-      message: 'Salary marked as paid',
       data: salary,
     });
   })

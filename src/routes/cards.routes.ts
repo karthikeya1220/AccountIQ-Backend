@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticate, isAdmin, AuthRequest } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
-import { CardService } from '../services';
-import { createCardSchema, updateCardSchema } from '../validators';
+import { CardsService } from '../services/cards.service';
+import { createCardSchema } from '../validators';
 import { ZodError } from 'zod';
 
 const router = Router();
@@ -11,9 +11,9 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const cards = await CardService.getCards(req.user!.userId);
-    const stats = await CardService.getCardStats(req.user!.userId);
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const cards = await CardsService.getActiveCards();
+    const stats = await CardsService.getCardStats();
 
     res.json({
       success: true,
@@ -27,9 +27,9 @@ router.get(
 router.get(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const card = await CardService.getCardById(id, req.user!.userId);
+    const card = await CardsService.getCardById(id);
 
     if (!card) {
       return res.status(404).json({ success: false, error: 'Card not found' });
@@ -43,10 +43,19 @@ router.get(
 router.post(
   '/',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     try {
       const cardData = createCardSchema.parse(req.body);
-      const card = await CardService.createCard(cardData, req.user!.userId);
+      const card = await CardsService.createCard({
+        cardNumber: cardData.cardNumber,
+        cardHolder: cardData.cardHolder,
+        cardType: cardData.cardType,
+        bank: cardData.bank,
+        expiryDate: cardData.expiryDate,
+        cardLimit: cardData.limit || 0,
+        balance: 0,
+        isActive: true,
+      });
 
       res.status(201).json({
         success: true,
@@ -66,11 +75,19 @@ router.post(
 router.put(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const cardData = updateCardSchema.parse(req.body);
-      const card = await CardService.updateCard(id, cardData, req.user!.userId);
+      const cardData = req.body;
+      const card = await CardsService.updateCard(id, {
+        cardNumber: cardData.card_number,
+        cardHolder: cardData.card_holder,
+        cardType: cardData.card_type,
+        bank: cardData.bank,
+        expiryDate: cardData.expiry_date,
+        cardLimit: cardData.card_limit,
+        isActive: cardData.is_active,
+      });
 
       res.json({
         success: true,
@@ -90,9 +107,16 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    await CardService.deleteCard(id, req.user!.userId);
+    await CardsService.deleteCard(id);
+
+    res.json({
+      success: true,
+      message: 'Card deleted successfully',
+    });
+  })
+);
 
     res.json({
       success: true,

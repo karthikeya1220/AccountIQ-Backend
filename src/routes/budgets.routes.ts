@@ -1,32 +1,39 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
-import { BudgetService } from '../services';
-import { createBudgetSchema, updateBudgetSchema } from '../validators';
-import { ZodError } from 'zod';
+import { BudgetsService } from '../services/budgets.service';
+import { AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
+const budgetsService = new BudgetsService();
+
+// Get budget alerts (must come before /:id to avoid route conflict)
+router.get(
+  '/alerts/current',
+  authenticate,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { threshold } = req.query;
+    const alerts = await budgetsService.getBudgetAlerts(
+      threshold ? parseFloat(threshold as string) : 0.8
+    );
+    res.json(alerts);
+  })
+);
 
 // Get all budgets
 router.get(
   '/',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const filters = {
-        period: req.query.period as string,
-        category: req.query.category as string,
-      };
-
-      const budgets = await BudgetService.getBudgets(filters);
-
-      res.json({
-        success: true,
-        data: budgets,
-      });
-    } catch (error) {
-      throw error;
-    }
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { period, month, isActive } = req.query;
+    
+    const budgets = await budgetsService.getAllBudgets({
+      period: period as string,
+      month: month as string,
+      isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
+    });
+    
+    res.json(budgets);
   })
 );
 
@@ -34,22 +41,10 @@ router.get(
 router.post(
   '/',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const budgetData = createBudgetSchema.parse(req.body);
-      const budget = await BudgetService.createBudget(budgetData, req.user!.userId);
-
-      res.status(201).json({
-        success: true,
-        message: 'Budget created successfully',
-        data: budget,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ success: false, error: 'Validation failed', details: error.errors });
-      }
-      throw error;
-    }
+  isAdmin,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const budget = await budgetsService.createBudget(req.body);
+    res.status(201).json(budget);
   })
 );
 
@@ -57,15 +52,9 @@ router.post(
 router.get(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const budget = await BudgetService.getBudgetById(id);
-
-    if (!budget) {
-      return res.status(404).json({ success: false, error: 'Budget not found' });
-    }
-
-    res.json({ success: true, data: budget });
+  asyncHandler(async (req: AuthRequest, res) => {
+    const budget = await budgetsService.getBudgetById(req.params.id);
+    res.json(budget);
   })
 );
 
@@ -73,23 +62,10 @@ router.get(
 router.put(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const budgetData = updateBudgetSchema.parse(req.body);
-      const budget = await BudgetService.updateBudget(id, budgetData);
-
-      res.json({
-        success: true,
-        message: 'Budget updated successfully',
-        data: budget,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ success: false, error: 'Validation failed', details: error.errors });
-      }
-      throw error;
-    }
+  isAdmin,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const budget = await budgetsService.updateBudget(req.params.id, req.body);
+    res.json(budget);
   })
 );
 
@@ -97,28 +73,10 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    await BudgetService.deleteBudget(id);
-
-    res.json({
-      success: true,
-      message: 'Budget deleted successfully',
-    });
-  })
-);
-
-// Get budget alerts
-router.get(
-  '/alerts/current',
-  authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const alerts = await BudgetService.checkBudgetAlerts();
-    
-    res.json({
-      success: true,
-      data: alerts,
-    });
+  isAdmin,
+  asyncHandler(async (req: AuthRequest, res) => {
+    await budgetsService.deleteBudget(req.params.id);
+    res.json({ message: 'Budget deleted successfully' });
   })
 );
 

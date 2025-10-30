@@ -1,9 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
-import { CashTransactionService } from '../services';
-import { createCashTransactionSchema, updateCashTransactionSchema } from '../validators';
-import { ZodError } from 'zod';
+import { CashTransactionsService } from '../services/cash-transactions.service';
 
 const router = Router();
 
@@ -11,26 +9,22 @@ const router = Router();
 router.get(
   '/',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const filters = {
-        type: req.query.type as string,
-        startDate: req.query.startDate as string,
-        endDate: req.query.endDate as string,
-        category: req.query.category as string,
-      };
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const filters = {
+      startDate: req.query.startDate as string,
+      endDate: req.query.endDate as string,
+      type: req.query.type as string,
+      category: req.query.category as string,
+    };
 
-      const transactions = await CashTransactionService.getTransactions(req.user!.userId, filters);
-      const stats = await CashTransactionService.getTransactionStats(req.user!.userId);
+    const transactions = await CashTransactionsService.getAllTransactions(filters);
+    const stats = await CashTransactionsService.getTransactionStats(filters);
 
-      res.json({
-        success: true,
-        data: transactions,
-        stats,
-      });
-    } catch (error) {
-      throw error;
-    }
+    res.json({
+      success: true,
+      data: transactions,
+      stats,
+    });
   })
 );
 
@@ -38,22 +32,14 @@ router.get(
 router.post(
   '/',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const transactionData = createCashTransactionSchema.parse(req.body);
-      const transaction = await CashTransactionService.createTransaction(transactionData, req.user!.userId);
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const transaction = await CashTransactionsService.createTransaction(req.body, req.user!.id);
 
-      res.status(201).json({
-        success: true,
-        message: 'Cash transaction created successfully',
-        data: transaction,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ success: false, error: 'Validation failed', details: error.errors });
-      }
-      throw error;
-    }
+    res.status(201).json({
+      success: true,
+      message: 'Cash transaction created successfully',
+      data: transaction,
+    });
   })
 );
 
@@ -61,9 +47,9 @@ router.post(
 router.get(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const transaction = await CashTransactionService.getTransactionById(id, req.user!.userId);
+    const transaction = await CashTransactionsService.getTransactionById(id);
 
     if (!transaction) {
       return res.status(404).json({ success: false, error: 'Transaction not found' });
@@ -77,23 +63,15 @@ router.get(
 router.put(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const transactionData = updateCashTransactionSchema.parse(req.body);
-      const transaction = await CashTransactionService.updateTransaction(id, transactionData, req.user!.userId);
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const transaction = await CashTransactionsService.updateTransaction(id, req.body);
 
-      res.json({
-        success: true,
-        message: 'Cash transaction updated successfully',
-        data: transaction,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ success: false, error: 'Validation failed', details: error.errors });
-      }
-      throw error;
-    }
+    res.json({
+      success: true,
+      message: 'Transaction updated successfully',
+      data: transaction,
+    });
   })
 );
 
@@ -101,13 +79,13 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    await CashTransactionService.deleteTransaction(id, req.user!.userId);
+    await CashTransactionsService.deleteTransaction(id);
 
     res.json({
       success: true,
-      message: 'Cash transaction deleted successfully',
+      message: 'Transaction deleted successfully',
     });
   })
 );

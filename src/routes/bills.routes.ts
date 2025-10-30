@@ -1,33 +1,25 @@
-import { Router, Request, Response } from 'express';
-import { authenticate } from '../middleware/auth.middleware';
+import { Router } from 'express';
+import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
-import { BillService } from '../services';
-import { createBillSchema, updateBillSchema, billFilterSchema } from '../validators';
-import { ZodError } from 'zod';
+import { BillsService } from '../services/bills.service';
+import multer from 'multer';
+import storageService from '../db/storage';
 
 const router = Router();
+const upload = multer();
 
 // Get all bills
 router.get(
   '/',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const filters = billFilterSchema.parse(req.query);
-      const bills = await BillService.getBills(req.user!.userId, filters);
-      const stats = await BillService.getBillStats(req.user!.userId);
-
-      res.json({
-        success: true,
-        data: bills,
-        stats,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ success: false, error: 'Invalid filters', details: error.errors });
-      }
-      throw error;
-    }
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { startDate, endDate, status } = req.query;
+    const bills = await BillsService.getAllBills(req.user!.id, {
+      startDate,
+      endDate,
+      status,
+    });
+    res.json(bills);
   })
 );
 
@@ -35,15 +27,9 @@ router.get(
 router.get(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const bill = await BillService.getBillById(id, req.user!.userId);
-
-    if (!bill) {
-      return res.status(404).json({ success: false, error: 'Bill not found' });
-    }
-
-    res.json({ success: true, data: bill });
+  asyncHandler(async (req, res) => {
+    const bill = await BillsService.getBillById(req.params.id);
+    res.json(bill);
   })
 );
 
@@ -51,22 +37,9 @@ router.get(
 router.post(
   '/',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const billData = createBillSchema.parse(req.body);
-      const bill = await BillService.createBill(billData, req.user!.userId);
-
-      res.status(201).json({
-        success: true,
-        message: 'Bill created successfully',
-        data: bill,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ success: false, error: 'Validation failed', details: error.errors });
-      }
-      throw error;
-    }
+  asyncHandler(async (req: AuthRequest, res) => {
+    const bill = await BillsService.createBill(req.body, req.user!.id);
+    res.status(201).json(bill);
   })
 );
 
@@ -74,23 +47,9 @@ router.post(
 router.put(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const billData = updateBillSchema.parse(req.body);
-      const bill = await BillService.updateBill(id, billData, req.user!.userId);
-
-      res.json({
-        success: true,
-        message: 'Bill updated successfully',
-        data: bill,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ success: false, error: 'Validation failed', details: error.errors });
-      }
-      throw error;
-    }
+  asyncHandler(async (req: AuthRequest, res) => {
+    const bill = await BillsService.updateBill(req.params.id, req.body, req.user?.id);
+    res.json(bill);
   })
 );
 
@@ -98,14 +57,9 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    await BillService.deleteBill(id, req.user!.userId);
-
-    res.json({
-      success: true,
-      message: 'Bill deleted successfully',
-    });
+  asyncHandler(async (req, res) => {
+    const result = await BillsService.deleteBill(req.params.id);
+    res.json(result);
   })
 );
 
@@ -113,9 +67,57 @@ router.delete(
 router.get(
   '/stats/summary',
   authenticate,
-  asyncHandler(async (req: Request, res: Response) => {
-    const stats = await BillService.getBillStats(req.user!.userId);
-    res.json({ success: true, data: stats });
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { startDate, endDate } = req.query;
+    const stats = await BillsService.getBillStats(
+      req.user!.id,
+      startDate as string,
+      endDate as string
+    );
+    res.json(stats);
+  })
+);
+
+// Export bills (placeholder - implement with PDFKit/XLSX)
+router.get(
+  '/export/pdf',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    res.json({ message: 'PDF export - to be implemented' });
+  })
+);
+
+// Get bill statistics
+router.get(
+  '/export/excel',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    res.json({ message: 'Excel export - to be implemented' });
+  })
+);
+
+
+// Upload bill attachment
+router.post(
+  '/:id/upload',
+  authenticate,
+  upload.single('file'),
+  asyncHandler(async (req, res) => {
+    const billId = req.params.id;
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+    try {
+      const result = await storageService.uploadBillAttachment(
+        billId,
+        req.file.buffer,
+        req.file.originalname
+      );
+      res.status(201).json({ success: true, ...result });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      res.status(500).json({ success: false, error: errorMsg });
+    }
   })
 );
 

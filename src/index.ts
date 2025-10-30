@@ -25,10 +25,38 @@ const PORT = process.env.BACKEND_PORT || 5000;
 
 // Security middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+
+// CORS configuration: allow localhost:3000 and Codespaces app.github.dev by default
+const defaultAllowedOrigins = [
+  'http://localhost:3000',
+];
+
+// Support comma-separated FRONTEND_URLS and single FRONTEND_URL
+const envOrigins = [
+  process.env.FRONTEND_URL,
+  ...(process.env.FRONTEND_URLS ? process.env.FRONTEND_URLS.split(',').map((s) => s.trim()) : []),
+].filter(Boolean) as string[];
+
+// Regex for GitHub Codespaces forwarded URLs (port 3000)
+const codespacesRegex = /^https:\/\/[a-z0-9-]+-3000\.app\.github\.dev$/;
+
+const allowedOrigins = [...defaultAllowedOrigins, ...envOrigins];
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow server-to-server, curl, etc.
+    const allowed = allowedOrigins.includes(origin) || codespacesRegex.test(origin);
+    if (allowed) return callback(null, true);
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
   credentials: true,
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+// Explicitly handle preflight across routes
+app.options('*', cors(corsOptions));
 
 // Logging
 app.use(pinoHttp());

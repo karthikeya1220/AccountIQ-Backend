@@ -1,8 +1,26 @@
-import { query } from './db';
+require('dotenv').config();
 
-export const initializeDatabase = async () => {
+// Import the migration function directly without building
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'password',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME || 'accounting_db',
+});
+
+const query = (text, params) => {
+  return pool.query(text, params);
+};
+
+async function initializeDatabase() {
   try {
+    console.log('🚀 Starting database migration...');
+    
     // Create users table
+    console.log('Creating users table...');
     await query(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -19,6 +37,7 @@ export const initializeDatabase = async () => {
     `);
 
     // Create employees table
+    console.log('Creating employees table...');
     await query(`
       CREATE TABLE IF NOT EXISTS employees (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -35,7 +54,26 @@ export const initializeDatabase = async () => {
       )
     `);
 
+    // Create cards table (before bills since bills references cards)
+    console.log('Creating cards table...');
+    await query(`
+      CREATE TABLE IF NOT EXISTS cards (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        card_number VARCHAR(20) NOT NULL UNIQUE,
+        card_holder VARCHAR(100) NOT NULL,
+        card_type VARCHAR(50),
+        bank VARCHAR(100),
+        expiry_date DATE,
+        card_limit DECIMAL(12, 2),
+        balance DECIMAL(12, 2) DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Create bills table
+    console.log('Creating bills table...');
     await query(`
       CREATE TABLE IF NOT EXISTS bills (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -54,24 +92,8 @@ export const initializeDatabase = async () => {
       )
     `);
 
-    // Create cards table
-    await query(`
-      CREATE TABLE IF NOT EXISTS cards (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        card_number VARCHAR(20) NOT NULL UNIQUE,
-        card_holder VARCHAR(100) NOT NULL,
-        card_type VARCHAR(50),
-        bank VARCHAR(100),
-        expiry_date DATE,
-        card_limit DECIMAL(12, 2),
-        balance DECIMAL(12, 2) DEFAULT 0,
-        is_active BOOLEAN DEFAULT true,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
     // Create cash transactions table
+    console.log('Creating cash_transactions table...');
     await query(`
       CREATE TABLE IF NOT EXISTS cash_transactions (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -79,8 +101,7 @@ export const initializeDatabase = async () => {
         description VARCHAR(255) NOT NULL,
         amount DECIMAL(12, 2) NOT NULL,
         transaction_type VARCHAR(50),
-        category VARCHAR(100),
-        payment_method VARCHAR(50),
+        category_id UUID,
         notes TEXT,
         created_by UUID REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -89,6 +110,7 @@ export const initializeDatabase = async () => {
     `);
 
     // Create salaries table
+    console.log('Creating salaries table...');
     await query(`
       CREATE TABLE IF NOT EXISTS salaries (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -106,6 +128,7 @@ export const initializeDatabase = async () => {
     `);
 
     // Create petty expenses table
+    console.log('Creating petty_expenses table...');
     await query(`
       CREATE TABLE IF NOT EXISTS petty_expenses (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -120,6 +143,7 @@ export const initializeDatabase = async () => {
     `);
 
     // Create reminders table
+    console.log('Creating reminders table...');
     await query(`
       CREATE TABLE IF NOT EXISTS reminders (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -138,6 +162,7 @@ export const initializeDatabase = async () => {
     `);
 
     // Create budgets table
+    console.log('Creating budgets table...');
     await query(`
       CREATE TABLE IF NOT EXISTS budgets (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -154,6 +179,7 @@ export const initializeDatabase = async () => {
     `);
 
     // Create sessions table
+    console.log('Creating sessions table...');
     await query(`
       CREATE TABLE IF NOT EXISTS sessions (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -169,9 +195,16 @@ export const initializeDatabase = async () => {
       )
     `);
 
-    console.log('Database initialized successfully');
+    console.log('✅ Database migration completed successfully!');
+    console.log('\n📝 Next steps:');
+    console.log('1. Create an admin user with: node seed-admin.js');
+    console.log('2. Start the backend server with: npm run dev');
+    
+    process.exit(0);
   } catch (error) {
-    console.error('Error initializing database:', error);
-    throw error;
+    console.error('❌ Migration failed:', error);
+    process.exit(1);
   }
-};
+}
+
+initializeDatabase();

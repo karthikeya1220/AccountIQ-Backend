@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { getSupabaseClient } from '../db/db';
+import { supabaseAdmin } from '../db/supabase';
 import { AuthPayload, UserRole } from '../types';
 
 declare global {
@@ -11,9 +11,10 @@ declare global {
   }
 }
 
-/**
- * Middleware to verify Supabase JWT token and attach user to request
- */
+export interface AuthRequest extends Request {
+  user?: AuthPayload;
+}
+
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
@@ -22,35 +23,32 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       return res.status(401).json({ error: 'No authorization token provided' });
     }
 
-    const token = authHeader.substring(7); // Remove "Bearer " prefix
-
-    // Verify token with Supabase
-    const supabase = getSupabaseClient();
-    const { data, error } = await supabase.auth.getUser(token);
+    // Verify token with Supabase Auth
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !data.user) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+      return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // Get user details from database
-    const { data: userData, error: userError } = await supabase
+    // Get user role from public.users table
+    const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
-      .select('*')
+      .select('id, email, role')
       .eq('id', data.user.id)
+      .eq('is_active', true)
       .single();
 
     if (userError || !userData) {
-      return res.status(401).json({ error: 'User not found' });
+      return res.status(401).json({ error: 'User not found or inactive' });
     }
 
-    // Attach user info to request
+    // Attach user to request
     req.user = {
-      userId: data.user.id,
-      email: data.user.email || userData.email,
-      role: (userData.role || 'user') as UserRole,
-    } as AuthPayload;
+      id: userData.id,
+      email: userData.email,
+      role: userData.role as UserRole,
+    };
 
-    req.auth = data;
     next();
   } catch (error) {
     console.error('Authentication error:', error);
