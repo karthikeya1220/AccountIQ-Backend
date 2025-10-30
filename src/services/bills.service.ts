@@ -53,16 +53,25 @@ export class BillsService {
   }
 
   static async createBill(data: any, userId: string) {
+    // Handle both camelCase (frontend) and snake_case (validator) formats
     const billData = {
-      bill_date: data.billDate || new Date().toISOString().split('T')[0],
-      vendor: data.vendor,
+      bill_date: data.billDate || data.bill_date || new Date().toISOString().split('T')[0],
+      vendor_name: data.vendor || data.vendor_name,
       amount: data.amount,
       description: data.description || '',
-      category_id: data.categoryId || null,
-      card_id: data.cardId || null,
+      category: data.category || null,
+      card_id: data.cardId || data.card_id || null,
       status: data.status || 'pending',
       created_by: userId,
     };
+
+    // Validate required fields
+    if (!billData.vendor_name) {
+      throw new Error('Vendor name is required');
+    }
+    if (!billData.amount || billData.amount <= 0) {
+      throw new Error('Valid amount is required');
+    }
 
     const { data: newBill, error } = await supabaseAdmin
       .from('bills')
@@ -75,9 +84,10 @@ export class BillsService {
     }
     
     // If linked to a card, update card balance using RPC function
-    if (data.cardId) {
+    const cardId = data.cardId || data.card_id;
+    if (cardId) {
       const { error: rpcError } = await supabaseAdmin.rpc('increment_card_balance', {
-        card_id_param: data.cardId,
+        card_id_param: cardId,
         amount_param: data.amount
       });
 
@@ -97,12 +107,19 @@ export class BillsService {
       updated_at: new Date().toISOString()
     };
 
-    if (data.billDate !== undefined) updateData.bill_date = data.billDate;
-    if (data.vendor !== undefined) updateData.vendor = data.vendor;
+    // Handle both camelCase and snake_case formats
+    if (data.billDate !== undefined || data.bill_date !== undefined) {
+      updateData.bill_date = data.billDate || data.bill_date;
+    }
+    if (data.vendor !== undefined || data.vendor_name !== undefined) {
+      updateData.vendor_name = data.vendor || data.vendor_name;
+    }
     if (data.amount !== undefined) updateData.amount = data.amount;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.status !== undefined) updateData.status = data.status;
-    if (data.cardId !== undefined) updateData.card_id = data.cardId;
+    if (data.cardId !== undefined || data.card_id !== undefined) {
+      updateData.card_id = data.cardId !== undefined ? data.cardId : data.card_id;
+    }
 
     const { data: updatedBill, error } = await supabaseAdmin
       .from('bills')
@@ -116,7 +133,9 @@ export class BillsService {
     }
 
     // Handle card balance updates
-    if (data.amount !== undefined || data.cardId !== undefined) {
+    const newCardId = data.cardId !== undefined ? data.cardId : (data.card_id !== undefined ? data.card_id : undefined);
+    
+    if (data.amount !== undefined || newCardId !== undefined) {
       // Remove old amount from old card
       if (currentBill.card_id) {
         await supabaseAdmin.rpc('decrement_card_balance', {
@@ -126,13 +145,13 @@ export class BillsService {
       }
       
       // Add new amount to new card
-      const newCardId = data.cardId !== undefined ? data.cardId : currentBill.card_id;
-      const newAmount = data.amount !== undefined ? data.amount : currentBill.amount;
+      const finalCardId = newCardId !== undefined ? newCardId : currentBill.card_id;
+      const finalAmount = data.amount !== undefined ? data.amount : currentBill.amount;
       
-      if (newCardId) {
+      if (finalCardId) {
         await supabaseAdmin.rpc('increment_card_balance', {
-          card_id: newCardId,
-          amount: newAmount
+          card_id: finalCardId,
+          amount: finalAmount
         });
       }
     }

@@ -32,6 +32,7 @@ app.use(helmet());
 // CORS configuration: allow localhost:3000 and Codespaces app.github.dev by default
 const defaultAllowedOrigins = [
   'http://localhost:3000',
+  'https://localhost:3000',
 ];
 
 // Support comma-separated FRONTEND_URLS and single FRONTEND_URL
