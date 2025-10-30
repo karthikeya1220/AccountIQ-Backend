@@ -16,6 +16,7 @@ import reminderRoutes from './routes/reminders.routes';
 import budgetRoutes from './routes/budgets.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import sessionRoutes from './routes/sessions.routes';
+import employeesRoutes from './routes/employees.routes';
 import { errorHandler } from './middleware/error.middleware';
 import initializeStorageBuckets from './db/storage-init';
 
@@ -90,6 +91,7 @@ app.use('/api/bills', billRoutes);
 app.use('/api/cards', cardRoutes);
 app.use('/api/cash-transactions', cashTransactionRoutes);
 app.use('/api/salary', salaryRoutes);
+app.use('/api/employees', employeesRoutes);
 app.use('/api/petty-expenses', pettyExpenseRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/budgets', budgetRoutes);

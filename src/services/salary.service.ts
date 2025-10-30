@@ -47,10 +47,10 @@ export class SalaryService {
     employeeId?: string;
     month?: string;
     status?: string;
-  } = {}): Promise<Salary[]> {
+  } = {}): Promise<any[]> {
     let query = supabaseAdmin
       .from('salaries')
-      .select('*')
+      .select('*, employee:employees(id, first_name, last_name, email, designation, base_salary)')
       .order('month', { ascending: false });
 
     if (filters.employeeId) {
@@ -73,10 +73,10 @@ export class SalaryService {
   }
 
   // Get salary by ID
-  async getSalaryById(id: string): Promise<Salary> {
+  async getSalaryById(id: string): Promise<any> {
     const { data, error } = await supabaseAdmin
       .from('salaries')
-      .select('*')
+      .select('*, employee:employees(id, first_name, last_name, email, designation, base_salary)')
       .eq('id', id)
       .single();
 
