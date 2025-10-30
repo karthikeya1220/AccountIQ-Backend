@@ -42,7 +42,10 @@ router.get(
       userId: req.user?.id,
     });
     
-    res.json(expenses);
+    res.json({
+      success: true,
+      data: expenses,
+    });
   })
 );
 
@@ -60,7 +63,10 @@ router.post(
       req.user.id
     );
     
-    res.status(201).json(expense);
+    res.status(201).json({
+      success: true,
+      data: expense,
+    });
   })
 );
 
@@ -70,7 +76,10 @@ router.get(
   authenticate,
   asyncHandler(async (req: AuthRequest, res) => {
     const expense = await pettyExpensesService.getExpenseById(req.params.id);
-    res.json(expense);
+    res.json({
+      success: true,
+      data: expense,
+    });
   })
 );
 
@@ -83,7 +92,10 @@ router.put(
       req.params.id,
       req.body
     );
-    res.json(expense);
+    res.json({
+      success: true,
+      data: expense,
+    });
   })
 );
 
@@ -93,7 +105,10 @@ router.delete(
   authenticate,
   asyncHandler(async (req: AuthRequest, res) => {
     await pettyExpensesService.deleteExpense(req.params.id);
-    res.json({ message: 'Petty expense deleted successfully' });
+    res.json({
+      success: true,
+      message: 'Petty expense deleted successfully',
+    });
   })
 );
 

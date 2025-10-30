@@ -92,22 +92,71 @@ export class SalaryService {
   }
 
   // Create new salary record
-  async createSalary(salaryData: CreateSalaryInput): Promise<Salary> {
+  async createSalary(salaryData: any): Promise<Salary> {
+    // Map frontend fields to database fields
+    const dbSalaryData: any = {};
+
+    // Handle employee_id
+    if (salaryData.employee_id) {
+      dbSalaryData.employee_id = salaryData.employee_id;
+    }
+
+    // Handle month field (can be 'salary_month' or 'month')
+    if (salaryData.salary_month) {
+      dbSalaryData.month = salaryData.salary_month;
+    } else if (salaryData.month) {
+      dbSalaryData.month = salaryData.month;
+    }
+
+    // Handle base_salary
+    if (salaryData.base_salary !== undefined) {
+      dbSalaryData.base_salary = salaryData.base_salary;
+    }
+
+    // Handle allowances
+    if (salaryData.allowances !== undefined) {
+      dbSalaryData.allowances = salaryData.allowances;
+    } else {
+      dbSalaryData.allowances = 0;
+    }
+
+    // Handle deductions
+    if (salaryData.deductions !== undefined) {
+      dbSalaryData.deductions = salaryData.deductions;
+    } else {
+      dbSalaryData.deductions = 0;
+    }
+
+    // Calculate net salary
     const netSalary = this.calculateNetSalary(
-      salaryData.base_salary,
-      salaryData.allowances,
-      salaryData.deductions
+      dbSalaryData.base_salary,
+      dbSalaryData.allowances,
+      dbSalaryData.deductions
     );
+    dbSalaryData.net_salary = netSalary;
+
+    // Handle status field (can be 'payment_status' or 'status')
+    if (salaryData.payment_status) {
+      dbSalaryData.status = salaryData.payment_status;
+    } else if (salaryData.status) {
+      dbSalaryData.status = salaryData.status;
+    } else {
+      dbSalaryData.status = 'pending';
+    }
+
+    // Handle paid_date
+    if (salaryData.payment_date) {
+      dbSalaryData.paid_date = salaryData.payment_date;
+    } else if (salaryData.paid_date) {
+      dbSalaryData.paid_date = salaryData.paid_date;
+    }
+
+    // Note: 'notes' and 'created_by' are not in the database schema (migrations.ts)
+    // If these fields are needed, add them to the database schema first
 
     const { data, error } = await supabaseAdmin
       .from('salaries')
-      .insert([
-        {
-          ...salaryData,
-          net_salary: netSalary,
-          status: 'pending',
-        },
-      ])
+      .insert([dbSalaryData])
       .select()
       .single();
 
