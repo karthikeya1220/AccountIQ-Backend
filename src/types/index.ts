@@ -197,7 +197,7 @@ export interface LoginResponse {
 }
 
 export interface AuthPayload {
-  userId: string;
+  id: string;
   email: string;
-  role: UserRole;
+  role: UserRole | string;
 }

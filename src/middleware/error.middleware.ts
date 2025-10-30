@@ -26,9 +26,14 @@ export const errorHandler = (
   }
 
   console.error('Unhandled error:', err);
+  console.error('Error stack:', err.stack);
+  console.error('Request URL:', req.url);
+  console.error('Request body:', req.body);
+  
   res.status(500).json({
     success: false,
     error: 'Internal server error',
+    details: process.env.NODE_ENV === 'development' ? err.message : undefined,
   } as ApiResponse);
 };
 

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { supabaseAdmin } from '../db/supabase';
 import { AuthPayload, UserRole } from '../types';
 
 declare global {
@@ -10,7 +10,11 @@ declare global {
   }
 }
 
-export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+export interface AuthRequest extends Request {
+  user?: AuthPayload;
+}
+
+export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
 
@@ -18,8 +22,32 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as AuthPayload;
-    req.user = decoded;
+    // Verify token with Supabase Auth
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+
+    if (error || !data.user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    // Get user role from public.users table
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, email, role')
+      .eq('id', data.user.id)
+      .eq('is_active', true)
+      .single();
+
+    if (userError || !userData) {
+      return res.status(401).json({ error: 'User not found or inactive' });
+    }
+
+    // Attach user to request
+    req.user = {
+      id: userData.id,
+      email: userData.email,
+      role: userData.role as UserRole,
+    };
+
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Invalid token' });

@@ -1,15 +1,36 @@
 import { Router } from 'express';
 import { authenticate, isAdmin } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
+import { SalaryService } from '../services/salary.service';
+import { AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
+const salaryService = new SalaryService();
+
+// Get employee salary history (must come before /:id to avoid route conflict)
+router.get(
+  '/employee/:employeeId',
+  authenticate,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const salaries = await salaryService.getEmployeeSalaryHistory(req.params.employeeId);
+    res.json(salaries);
+  })
+);
 
 // Get all salaries
 router.get(
   '/',
   authenticate,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Get all salaries' });
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { employeeId, month, status } = req.query;
+    
+    const salaries = await salaryService.getAllSalaries({
+      employeeId: employeeId as string,
+      month: month as string,
+      status: status as string,
+    });
+    
+    res.json(salaries);
   })
 );
 
@@ -18,8 +39,9 @@ router.post(
   '/',
   authenticate,
   isAdmin,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Create salary' });
+  asyncHandler(async (req: AuthRequest, res) => {
+    const salary = await salaryService.createSalary(req.body);
+    res.status(201).json(salary);
   })
 );
 
@@ -27,8 +49,9 @@ router.post(
 router.get(
   '/:id',
   authenticate,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Get salary by ID' });
+  asyncHandler(async (req: AuthRequest, res) => {
+    const salary = await salaryService.getSalaryById(req.params.id);
+    res.json(salary);
   })
 );
 
@@ -37,17 +60,9 @@ router.put(
   '/:id',
   authenticate,
   isAdmin,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Update salary' });
-  })
-);
-
-// Get employee salary history
-router.get(
-  '/employee/:employeeId',
-  authenticate,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Get employee salary history' });
+  asyncHandler(async (req: AuthRequest, res) => {
+    const salary = await salaryService.updateSalary(req.params.id, req.body);
+    res.json(salary);
   })
 );
 
@@ -56,8 +71,9 @@ router.put(
   '/:id/mark-paid',
   authenticate,
   isAdmin,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Mark salary as paid' });
+  asyncHandler(async (req: AuthRequest, res) => {
+    const salary = await salaryService.markAsPaid(req.params.id);
+    res.json(salary);
   })
 );
 

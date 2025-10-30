@@ -1,15 +1,48 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
+import { PettyExpensesService } from '../services/petty-expenses.service';
+import { AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
+const pettyExpensesService = new PettyExpensesService();
+
+// Get monthly summary (must come before /:id to avoid route conflict)
+router.get(
+  '/summary/monthly',
+  authenticate,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { month, year } = req.query;
+
+    if (!month || !year) {
+      return res.status(400).json({ 
+        error: 'Month and year are required query parameters' 
+      });
+    }
+
+    const summary = await pettyExpensesService.getMonthlySummary(
+      month as string,
+      year as string
+    );
+    res.json(summary);
+  })
+);
 
 // Get all petty expenses
 router.get(
   '/',
   authenticate,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Get all petty expenses' });
+  asyncHandler(async (req: AuthRequest, res) => {
+    const { startDate, endDate, categoryId } = req.query;
+    
+    const expenses = await pettyExpensesService.getAllExpenses({
+      startDate: startDate as string,
+      endDate: endDate as string,
+      categoryId: categoryId as string,
+      userId: req.user?.id,
+    });
+    
+    res.json(expenses);
   })
 );
 
@@ -17,8 +50,17 @@ router.get(
 router.post(
   '/',
   authenticate,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Create petty expense' });
+  asyncHandler(async (req: AuthRequest, res) => {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const expense = await pettyExpensesService.createExpense(
+      req.body,
+      req.user.id
+    );
+    
+    res.status(201).json(expense);
   })
 );
 
@@ -26,8 +68,9 @@ router.post(
 router.get(
   '/:id',
   authenticate,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Get petty expense by ID' });
+  asyncHandler(async (req: AuthRequest, res) => {
+    const expense = await pettyExpensesService.getExpenseById(req.params.id);
+    res.json(expense);
   })
 );
 
@@ -35,8 +78,12 @@ router.get(
 router.put(
   '/:id',
   authenticate,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Update petty expense' });
+  asyncHandler(async (req: AuthRequest, res) => {
+    const expense = await pettyExpensesService.updateExpense(
+      req.params.id,
+      req.body
+    );
+    res.json(expense);
   })
 );
 
@@ -44,17 +91,9 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Delete petty expense' });
-  })
-);
-
-// Get monthly summary
-router.get(
-  '/summary/monthly',
-  authenticate,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Get monthly petty expenses summary' });
+  asyncHandler(async (req: AuthRequest, res) => {
+    await pettyExpensesService.deleteExpense(req.params.id);
+    res.json({ message: 'Petty expense deleted successfully' });
   })
 );
 
