@@ -96,10 +96,11 @@ export class SalaryService {
     // Map frontend fields to database fields
     const dbSalaryData: any = {};
 
-    // Handle employee_id
-    if (salaryData.employee_id) {
+    // Handle employee_id - skip if it's a placeholder (all zeros)
+    if (salaryData.employee_id && salaryData.employee_id !== "00000000-0000-0000-0000-000000000000") {
       dbSalaryData.employee_id = salaryData.employee_id;
     }
+    // If employee_id is null or placeholder, we'll leave it null (requires nullable FK or removing FK)
 
     // Handle month field (can be 'salary_month' or 'month')
     if (salaryData.salary_month) {

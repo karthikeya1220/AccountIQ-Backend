@@ -13,7 +13,10 @@ router.get(
   authenticate,
   asyncHandler(async (req: AuthRequest, res) => {
     const salaries = await salaryService.getEmployeeSalaryHistory(req.params.employeeId);
-    res.json(salaries);
+    res.json({
+      success: true,
+      data: salaries,
+    });
   })
 );
 
@@ -30,7 +33,10 @@ router.get(
       status: status as string,
     });
     
-    res.json(salaries);
+    res.json({
+      success: true,
+      data: salaries,
+    });
   })
 );
 
@@ -41,7 +47,10 @@ router.post(
   isAdmin,
   asyncHandler(async (req: AuthRequest, res) => {
     const salary = await salaryService.createSalary(req.body);
-    res.status(201).json(salary);
+    res.status(201).json({
+      success: true,
+      data: salary,
+    });
   })
 );
 
@@ -51,7 +60,10 @@ router.get(
   authenticate,
   asyncHandler(async (req: AuthRequest, res) => {
     const salary = await salaryService.getSalaryById(req.params.id);
-    res.json(salary);
+    res.json({
+      success: true,
+      data: salary,
+    });
   })
 );
 
@@ -62,7 +74,10 @@ router.put(
   isAdmin,
   asyncHandler(async (req: AuthRequest, res) => {
     const salary = await salaryService.updateSalary(req.params.id, req.body);
-    res.json(salary);
+    res.json({
+      success: true,
+      data: salary,
+    });
   })
 );
 
@@ -73,7 +88,10 @@ router.put(
   isAdmin,
   asyncHandler(async (req: AuthRequest, res) => {
     const salary = await salaryService.markAsPaid(req.params.id);
-    res.json(salary);
+    res.json({
+      success: true,
+      data: salary,
+    });
   })
 );
 
