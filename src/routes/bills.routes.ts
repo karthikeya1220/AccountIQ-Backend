@@ -87,6 +87,7 @@ router.get(
   })
 );
 
+// Get bill statistics
 router.get(
   '/export/excel',
   authenticate,

@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import { authenticate, isAdmin } from '../middleware/auth.middleware';
+import { Router, Request, Response } from 'express';
+import { authenticate } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
 import { SalaryService } from '../services/salary.service';
 import { AuthRequest } from '../middleware/auth.middleware';

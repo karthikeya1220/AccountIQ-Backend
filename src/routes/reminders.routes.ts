@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import { authenticate, isAdmin } from '../middleware/auth.middleware';
+import { Router, Request, Response } from 'express';
+import { authenticate } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
 import { RemindersService } from '../services/reminders.service';
 import { AuthRequest } from '../middleware/auth.middleware';

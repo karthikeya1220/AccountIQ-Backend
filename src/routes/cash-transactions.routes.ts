@@ -90,12 +90,13 @@ router.delete(
   })
 );
 
-// Export cash transactions
+// Get transaction statistics
 router.get(
-  '/export/excel',
+  '/stats/summary',
   authenticate,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Export cash transactions as Excel' });
+  asyncHandler(async (req: Request, res: Response) => {
+    const stats = await CashTransactionService.getTransactionStats(req.user!.userId);
+    res.json({ success: true, data: stats });
   })
 );
 

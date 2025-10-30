@@ -103,7 +103,7 @@ router.put(
   })
 );
 
-// Delete card
+// Delete card (soft delete)
 router.delete(
   '/:id',
   authenticate,
@@ -118,21 +118,20 @@ router.delete(
   })
 );
 
-// Get card balance
-router.get(
-  '/:id/balance',
-  authenticate,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Get card balance' });
+    res.json({
+      success: true,
+      message: 'Card deleted successfully',
+    });
   })
 );
 
-// Update card balance
-router.put(
-  '/:id/balance',
+// Get card statistics
+router.get(
+  '/stats/summary',
   authenticate,
-  asyncHandler(async (req, res) => {
-    res.json({ message: 'Update card balance' });
+  asyncHandler(async (req: Request, res: Response) => {
+    const stats = await CardService.getCardStats(req.user!.userId);
+    res.json({ success: true, data: stats });
   })
 );
 

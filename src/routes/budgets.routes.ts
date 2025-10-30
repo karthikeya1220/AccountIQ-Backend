@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import { authenticate, isAdmin } from '../middleware/auth.middleware';
+import { Router, Request, Response } from 'express';
+import { authenticate } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
 import { BudgetsService } from '../services/budgets.service';
 import { AuthRequest } from '../middleware/auth.middleware';
@@ -69,7 +69,7 @@ router.put(
   })
 );
 
-// Delete budget
+// Delete budget (soft delete)
 router.delete(
   '/:id',
   authenticate,

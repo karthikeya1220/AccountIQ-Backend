@@ -5,8 +5,9 @@ import { asyncHandler } from '../middleware/error.middleware';
 import { UserRole } from '../types';
 
 const router = Router();
+const supabase = getSupabaseClient();
 
-// Login
+// Sign up (register new user)
 router.post(
   '/login',
   asyncHandler(async (req, res) => {
@@ -53,7 +54,7 @@ router.post(
   })
 );
 
-// Register (admin only)
+// Login
 router.post(
   '/register',
   authenticate,
@@ -173,3 +174,4 @@ router.get(
 );
 
 export default router;
+
