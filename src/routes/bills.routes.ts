@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
+import { requireEditPermission, attachEditPermissions, withPermissionMetadata } from '../middleware/rbac.middleware';
+import { getEditableFields } from '../utils/rbac';
 import { BillsService } from '../services/bills.service';
 import multer from 'multer';
 import storageService from '../db/storage';
@@ -58,6 +60,7 @@ const upload = multer();
 router.get(
   '/',
   authenticate,
+  attachEditPermissions('bills'),
   asyncHandler(async (req: AuthRequest, res) => {
     const { startDate, endDate, status } = req.query;
     const bills = await BillsService.getAllBills(req.user!.id, {
@@ -65,7 +68,17 @@ router.get(
       endDate,
       status,
     });
-    res.json(bills);
+    
+    // Map through bills and add metadata to each
+    const billsWithMetadata = bills.map((bill: any) =>
+      withPermissionMetadata(
+        bill,
+        (req as any).editableFields,
+        (req as any).userRole
+      )
+    );
+    
+    res.json(billsWithMetadata);
   })
 );
 
@@ -101,9 +114,18 @@ router.get(
 router.get(
   '/:id',
   authenticate,
-  asyncHandler(async (req, res) => {
+  attachEditPermissions('bills'),
+  asyncHandler(async (req: AuthRequest, res) => {
     const bill = await BillsService.getBillById(req.params.id);
-    res.json(bill);
+    
+    // Include metadata about which fields this user can edit
+    const response = withPermissionMetadata(
+      bill,
+      (req as any).editableFields,
+      (req as any).userRole
+    );
+    
+    res.json(response);
   })
 );
 
@@ -230,9 +252,21 @@ router.post(
 router.put(
   '/:id',
   authenticate,
+  requireEditPermission('bills'),
   asyncHandler(async (req: AuthRequest, res) => {
-    const bill = await BillsService.updateBill(req.params.id, req.body, req.user?.id);
-    res.json(bill);
+    // Use filtered data that only includes editable fields
+    const filteredData = (req as any).editableData;
+    
+    const bill = await BillsService.updateBill(req.params.id, filteredData, req.user?.id);
+    
+    // Include metadata in response
+    const response = withPermissionMetadata(
+      bill,
+      getEditableFields(req.user!.role, 'bills'),
+      req.user!.role
+    );
+    
+    res.json(response);
   })
 );
 
