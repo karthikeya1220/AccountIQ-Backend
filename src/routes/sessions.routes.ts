@@ -4,6 +4,25 @@ import { asyncHandler } from '../middleware/error.middleware';
 
 const router = Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Sessions
+ *   description: Session management endpoints
+ */
+
+/**
+ * @swagger
+ * /api/sessions:
+ *   get:
+ *     summary: Get all active sessions (Admin only)
+ *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of active sessions
+ */
 // Get all active sessions
 router.get(
   '/',
@@ -13,6 +32,18 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/sessions/user:
+ *   get:
+ *     summary: Get sessions for current user
+ *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of sessions for the current user
+ */
 // Get user sessions
 router.get(
   '/user',
@@ -22,6 +53,24 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/sessions/{sessionId}:
+ *   delete:
+ *     summary: Revoke a session (Admin only)
+ *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Session revoked
+ */
 // Revoke session (admin only)
 router.delete(
   '/:sessionId',
@@ -32,6 +81,24 @@ router.delete(
   })
 );
 
+/**
+ * @swagger
+ * /api/sessions/user/{userId}/all:
+ *   delete:
+ *     summary: Revoke all sessions for a user (Admin only)
+ *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: All sessions revoked for user
+ */
 // Revoke all sessions for user (admin only)
 router.delete(
   '/user/:userId/all',

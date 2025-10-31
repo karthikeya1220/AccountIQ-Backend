@@ -13,12 +13,31 @@ import {
 
 const router = Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Dashboard
+ *   description: Dashboard statistics and analytics endpoints
+ */
+
+/**
+ * @swagger
+ * /api/dashboard:
+ *   get:
+ *     summary: Get dashboard KPIs and summaries
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard data
+ */
 // Get dashboard data (KPIs and summaries)
 router.get(
   '/',
   authenticate,
   asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.userId;
+    const userId = (req as any).user!.id;
 
     const [billStats, cardStats, cashStats, salaryStats, pettyStats, budgetAlerts, employees] = await Promise.all([
       BillService.getBillStats(userId),
@@ -45,12 +64,24 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/dashboard/kpis/summary:
+ *   get:
+ *     summary: Get KPI summary
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: KPI metrics
+ */
 // Get KPIs summary
 router.get(
   '/kpis/summary',
   authenticate,
   asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.userId;
+    const userId = (req as any).user!.id;
 
     const [billStats, cardStats, cashStats, salaryStats] = await Promise.all([
       BillService.getBillStats(userId),
@@ -74,12 +105,24 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/dashboard/charts/expenses:
+ *   get:
+ *     summary: Get expenses chart data by category
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Chart data
+ */
 // Get expenses chart data
 router.get(
   '/charts/expenses',
   authenticate,
   asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.userId;
+    const userId = (req as any).user!.id;
 
     // Get cash transactions by category
     const transactions = await CashTransactionService.getTransactions(userId);
@@ -107,6 +150,18 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/dashboard/charts/budget-status:
+ *   get:
+ *     summary: Get budget status chart data
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Chart data
+ */
 // Get budget status chart
 router.get(
   '/charts/budget-status',
@@ -129,12 +184,24 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/dashboard/charts/monthly-trend:
+ *   get:
+ *     summary: Get monthly trend chart data
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Trend data
+ */
 // Get monthly trend
 router.get(
   '/charts/monthly-trend',
   authenticate,
   asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.userId;
+    const userId = (req as any).user!.id;
     const months = 6;
     const trendData: any[] = [];
 
@@ -161,12 +228,30 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/dashboard/recent-transactions:
+ *   get:
+ *     summary: Get recent transactions
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *     responses:
+ *       200:
+ *         description: Combined list of recent bills and cash transactions
+ */
 // Get recent transactions
 router.get(
   '/recent-transactions',
   authenticate,
   asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.userId;
+    const userId = (req as any).user!.id;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
 
     const [bills, transactions] = await Promise.all([
