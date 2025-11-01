@@ -56,17 +56,17 @@ export class BillsService {
     // Handle both camelCase (frontend) and snake_case (validator) formats
     const billData = {
       bill_date: data.billDate || data.bill_date || new Date().toISOString().split('T')[0],
-      vendor_name: data.vendor || data.vendor_name,
+      vendor: data.vendor || data.vendor_name,
       amount: data.amount,
       description: data.description || '',
-      category: data.category || null,
+      category_id: data.categoryId || data.category_id || null,
       card_id: data.cardId || data.card_id || null,
       status: data.status || 'pending',
       created_by: userId,
     };
 
     // Validate required fields
-    if (!billData.vendor_name) {
+    if (!billData.vendor) {
       throw new Error('Vendor name is required');
     }
     if (!billData.amount || billData.amount <= 0) {
@@ -112,11 +112,14 @@ export class BillsService {
       updateData.bill_date = data.billDate || data.bill_date;
     }
     if (data.vendor !== undefined || data.vendor_name !== undefined) {
-      updateData.vendor_name = data.vendor || data.vendor_name;
+      updateData.vendor = data.vendor || data.vendor_name;
     }
     if (data.amount !== undefined) updateData.amount = data.amount;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.status !== undefined) updateData.status = data.status;
+    if (data.categoryId !== undefined || data.category_id !== undefined) {
+      updateData.category_id = data.categoryId !== undefined ? data.categoryId : data.category_id;
+    }
     if (data.cardId !== undefined || data.card_id !== undefined) {
       updateData.card_id = data.cardId !== undefined ? data.cardId : data.card_id;
     }
