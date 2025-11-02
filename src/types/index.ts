@@ -201,3 +201,112 @@ export interface AuthPayload {
   email: string;
   role: UserRole | string;
 }
+
+// Dashboard Types
+
+export interface DashboardKPIs {
+  totalExpenses: number;
+  totalIncome: number;
+  availableBalance: number;
+  budgetUtilization: number;
+  cardsInUse: number;
+  pendingBills: number;
+  cardBalances: number;
+  cashOnHand: number;
+  totalPayroll: number;
+  activeEmployees: number;
+}
+
+export interface MonthlyTrendPoint {
+  month: string; // YYYY-MM format
+  expenses: number;
+  budget: number;
+  income: number;
+}
+
+export interface ExpenseByCategoryPoint {
+  category: string;
+  amount: number;
+  percentage: number;
+  trend: 'up' | 'down' | 'stable';
+}
+
+export interface RecentTransaction {
+  id: string;
+  description: string;
+  amount: number;
+  date: Date;
+  status: 'approved' | 'pending' | 'rejected';
+  category: string;
+  type: 'expense' | 'income';
+  createdBy: string;
+}
+
+export interface BudgetAlert {
+  id: string;
+  category: string;
+  current: number;
+  limit: number;
+  percentage: number;
+  severity: 'low' | 'medium' | 'high';
+  message: string;
+}
+
+export interface DashboardAlerts {
+  budgetAlerts: BudgetAlert[];
+  pendingApprovals: number;
+  overdueBills: number;
+  lowCashBalance: boolean;
+}
+
+export interface CardSummary {
+  totalCards: number;
+  activeCards: number;
+  totalLimit: number;
+  totalUsed: number;
+  available: number;
+}
+
+export interface BudgetStatus {
+  onTrack: number;
+  warning: number;
+  exceeded: number;
+  total: number;
+}
+
+export interface DashboardPeriod {
+  startDate: string;
+  endDate: string;
+  label: string;
+}
+
+export interface DashboardMetadata {
+  dataFreshness: 'real-time' | 'cached' | 'stale';
+  cacheUntil: string;
+  cacheDuration: number;
+  permissions: {
+    canEdit: boolean;
+    canExport: boolean;
+    canDelete: boolean;
+  };
+  userRole: UserRole;
+}
+
+export interface DashboardSummaryData {
+  timestamp: string;
+  period: DashboardPeriod;
+  kpis: DashboardKPIs;
+  monthlyTrend: MonthlyTrendPoint[];
+  expensesByCategory: ExpenseByCategoryPoint[];
+  recentTransactions: RecentTransaction[];
+  alerts: DashboardAlerts;
+  cards: CardSummary;
+  budgetStatus: BudgetStatus;
+  metadata: DashboardMetadata;
+}
+
+export interface DashboardSummaryResponse {
+  success: true;
+  data: DashboardSummaryData;
+  pagination: null;
+}

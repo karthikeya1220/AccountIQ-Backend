@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../db/supabase';
+import { invalidateDashboardOnExpenseChange } from './cache-invalidation.service';
 
 export class CashTransactionsService {
   static async getAllTransactions(filters?: any) {
@@ -79,10 +80,13 @@ export class CashTransactionsService {
       throw new Error(`Failed to create transaction: ${error.message}`);
     }
     
+    // Invalidate dashboard cache
+    await invalidateDashboardOnExpenseChange(userId);
+    
     return newTransaction;
   }
 
-  static async updateTransaction(id: string, data: any) {
+  static async updateTransaction(id: string, data: any, userId?: string) {
     const updateData: any = {
       updated_at: new Date().toISOString()
     };
@@ -107,10 +111,15 @@ export class CashTransactionsService {
       throw new Error(`Failed to update transaction: ${error.message}`);
     }
     
+    // Invalidate dashboard cache
+    if (userId) {
+      await invalidateDashboardOnExpenseChange(userId);
+    }
+    
     return updatedTransaction;
   }
 
-  static async deleteTransaction(id: string) {
+  static async deleteTransaction(id: string, userId?: string) {
     const { error } = await supabaseAdmin
       .from('cash_transactions')
       .delete()
@@ -118,6 +127,11 @@ export class CashTransactionsService {
 
     if (error) {
       throw new Error(`Failed to delete transaction: ${error.message}`);
+    }
+
+    // Invalidate dashboard cache
+    if (userId) {
+      await invalidateDashboardOnExpenseChange(userId);
     }
 
     return { success: true, message: 'Transaction deleted successfully' };

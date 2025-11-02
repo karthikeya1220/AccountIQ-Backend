@@ -3,6 +3,15 @@
  */
 import { getSupabaseClient } from '../db/db';
 import bcrypt from 'bcrypt';
+export { dashboardService } from './dashboard.service';
+export {
+  invalidateDashboardOnBillChange,
+  invalidateDashboardOnExpenseChange,
+  invalidateDashboardOnBudgetChange,
+  invalidateDashboardOnCardChange,
+  invalidateDashboardOnSalaryChange,
+  invalidateDashboardCache,
+} from './cache-invalidation.service';
 
 const supabase = getSupabaseClient();
 

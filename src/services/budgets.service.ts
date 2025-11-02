@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../db/supabase';
+import { invalidateDashboardOnBudgetChange } from './cache-invalidation.service';
 
 export interface Budget {
   id: string;
@@ -82,7 +83,7 @@ export class BudgetsService {
   }
 
   // Create new budget
-  async createBudget(budgetData: any): Promise<Budget> {
+  async createBudget(budgetData: any, userId?: string): Promise<Budget> {
     // Map frontend fields to database fields
     const dbBudgetData: any = {
       spent: 0,
@@ -130,11 +131,16 @@ export class BudgetsService {
       throw new Error(`Failed to create budget: ${error.message}`);
     }
 
+    // Invalidate dashboard cache
+    if (userId) {
+      await invalidateDashboardOnBudgetChange(userId);
+    }
+
     return data;
   }
 
   // Update budget
-  async updateBudget(id: string, budgetData: UpdateBudgetInput): Promise<Budget> {
+  async updateBudget(id: string, budgetData: UpdateBudgetInput, userId?: string): Promise<Budget> {
     const { data, error } = await supabaseAdmin
       .from('budgets')
       .update({
@@ -153,11 +159,16 @@ export class BudgetsService {
       throw new Error('Budget not found');
     }
 
+    // Invalidate dashboard cache
+    if (userId) {
+      await invalidateDashboardOnBudgetChange(userId);
+    }
+
     return data;
   }
 
   // Delete budget
-  async deleteBudget(id: string): Promise<void> {
+  async deleteBudget(id: string, userId?: string): Promise<void> {
     const { error } = await supabaseAdmin
       .from('budgets')
       .delete()
@@ -165,6 +176,11 @@ export class BudgetsService {
 
     if (error) {
       throw new Error(`Failed to delete budget: ${error.message}`);
+    }
+
+    // Invalidate dashboard cache
+    if (userId) {
+      await invalidateDashboardOnBudgetChange(userId);
     }
   }
 

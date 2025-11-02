@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../db/supabase';
+import { invalidateDashboardOnBillChange } from './cache-invalidation.service';
 
 export class BillsService {
   static async getAllBills(userId: string, filters?: any) {
@@ -96,6 +97,9 @@ export class BillsService {
       }
     }
     
+    // Invalidate dashboard cache
+    await invalidateDashboardOnBillChange(userId);
+    
     return newBill;
   }
 
@@ -159,10 +163,15 @@ export class BillsService {
       }
     }
     
+    // Invalidate dashboard cache
+    if (userId) {
+      await invalidateDashboardOnBillChange(userId);
+    }
+    
     return updatedBill;
   }
 
-  static async deleteBill(id: string) {
+  static async deleteBill(id: string, userId?: string) {
     // Get bill details for card balance adjustment
     const bill = await this.getBillById(id);
     
@@ -181,6 +190,11 @@ export class BillsService {
 
     if (error) {
       throw new Error(`Failed to delete bill: ${error.message}`);
+    }
+
+    // Invalidate dashboard cache
+    if (userId) {
+      await invalidateDashboardOnBillChange(userId);
     }
 
     return { success: true, message: 'Bill deleted successfully' };
