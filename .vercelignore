@@ -1,0 +1,11 @@
+node_modules
+.env.local
+.env.*.local
+npm-debug.log
+yarn-error.log
+.git
+.gitignore
+README.md
+src
+tsconfig.json
+migrations
