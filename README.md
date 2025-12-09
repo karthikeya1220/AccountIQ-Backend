@@ -1,10 +1,19 @@
-# Accounting Dashboard - Full Stack TypeScript Application
+# AccountIQ Backend - RESTful API for Financial Management
 
-A comprehensive internal accounting web application built for IT consulting startups using **TypeScript** throughout the entire stack: Next.js frontend, Express.js backend, and PostgreSQL database.
+A comprehensive backend API built for financial management and accounting operations using **TypeScript**, **Express.js**, and **PostgreSQL** (via Supabase).
+
+## 📚 Complete Documentation
+
+This project includes extensive documentation to help you understand and integrate with the API:
+
+- **[QUICK_REFERENCE.md](./QUICK_REFERENCE.md)** - Quick start guide and cheat sheet
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete system architecture and design patterns
+- **[FLOW_DIAGRAMS.md](./FLOW_DIAGRAMS.md)** - Visual diagrams of data flows and processes
+- **[API_GUIDE.md](./API_GUIDE.md)** - Detailed API integration guide with code examples
 
 ## 🎯 Project Overview
 
-This accounting dashboard provides complete financial management capabilities including:
+This accounting dashboard backend provides complete financial management capabilities including:
 
 - **Daily Bills Management**: Upload, track, and manage bills with image/PDF proof
 - **Card Management**: CRUD operations for company credit/debit cards with balance tracking
@@ -190,6 +199,62 @@ Accounting-Dashboard/
 | **reminders** | Notifications |
 | **budgets** | Budget limits |
 | **sessions** | User sessions |
+
+## 📚 Documentation
+
+This backend includes comprehensive documentation:
+
+### Core Documentation Files
+
+| Document | Description | Use Case |
+|----------|-------------|----------|
+| **[QUICK_REFERENCE.md](./QUICK_REFERENCE.md)** | Quick start guide, cheat sheet, common commands | Start here for quick setup |
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | System architecture, tech stack, design patterns | Understand the system design |
+| **[FLOW_DIAGRAMS.md](./FLOW_DIAGRAMS.md)** | Visual diagrams of flows and processes | See how data flows |
+| **[API_GUIDE.md](./API_GUIDE.md)** | Complete API reference with examples | Integrate with the API |
+
+### What Each Document Contains
+
+#### QUICK_REFERENCE.md
+- Quick start guide
+- Environment setup
+- Common API calls
+- Troubleshooting tips
+- Best practices
+
+#### ARCHITECTURE.md
+- Tech stack overview
+- Layered architecture
+- API routes reference
+- Database schema
+- Middleware pipeline
+- Service layer design
+- Security features
+
+#### FLOW_DIAGRAMS.md
+- System architecture diagrams
+- Request-response lifecycle
+- Authentication flow
+- RBAC permission flow
+- Database relationships
+- Service interactions
+- File upload process
+
+#### API_GUIDE.md
+- Complete endpoint reference
+- Request/response examples
+- Authentication guide
+- Error handling
+- Code examples (JS, Python, React)
+- Best practices
+- Rate limiting info
+
+### API Documentation (Interactive)
+
+Access the interactive Swagger documentation:
+```
+http://localhost:5000/api-docs
+```
 
 ## 🚀 Quick Start Guide
 
