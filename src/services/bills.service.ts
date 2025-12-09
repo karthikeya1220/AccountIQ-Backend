@@ -5,11 +5,7 @@ export class BillsService {
   static async getAllBills(userId: string, filters?: any) {
     let query = supabaseAdmin
       .from('bills')
-      .select(`
-        *,
-        cards (card_number, card_holder),
-        users!bills_created_by_fkey (email)
-      `)
+      .select('*')
       .order('bill_date', { ascending: false })
       .order('created_at', { ascending: false });
 
@@ -26,31 +22,90 @@ export class BillsService {
       query = query.eq('status', filters.status);
     }
 
-    const { data, error } = await query;
+    const { data: bills, error } = await query;
 
     if (error) {
       throw new Error(`Failed to fetch bills: ${error.message}`);
     }
 
-    return data;
+    // Fetch related card and user data separately if needed
+    if (bills && bills.length > 0) {
+      const cardIds = bills.map(b => b.linked_card_id).filter(Boolean);
+      const userIds = bills.map(b => b.uploaded_by).filter(Boolean);
+
+      // Fetch cards data
+      let cardsMap: any = {};
+      if (cardIds.length > 0) {
+        const { data: cards } = await supabaseAdmin
+          .from('cards')
+          .select('id, card_number, holder_name')
+          .in('id', cardIds);
+        if (cards) {
+          cardsMap = cards.reduce((acc: any, card: any) => {
+            acc[card.id] = card;
+            return acc;
+          }, {});
+        }
+      }
+
+      // Fetch users data
+      let usersMap: any = {};
+      if (userIds.length > 0) {
+        const { data: users } = await supabaseAdmin
+          .from('users')
+          .select('id, email')
+          .in('id', userIds);
+        if (users) {
+          usersMap = users.reduce((acc: any, user: any) => {
+            acc[user.id] = user;
+            return acc;
+          }, {});
+        }
+      }
+
+      // Attach related data to bills
+      return bills.map(bill => ({
+        ...bill,
+        cards: bill.linked_card_id ? cardsMap[bill.linked_card_id] : null,
+        users: bill.uploaded_by ? usersMap[bill.uploaded_by] : null
+      }));
+    }
+
+    return bills;
   }
 
   static async getBillById(id: string) {
-    const { data, error } = await supabaseAdmin
+    const { data: bill, error } = await supabaseAdmin
       .from('bills')
-      .select(`
-        *,
-        cards (card_number, card_holder),
-        users!bills_created_by_fkey (email)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
     
     if (error) {
       throw new Error(`Bill not found: ${error.message}`);
     }
+
+    // Fetch related card data if exists
+    if (bill.linked_card_id) {
+      const { data: card } = await supabaseAdmin
+        .from('cards')
+        .select('id, card_number, holder_name')
+        .eq('id', bill.linked_card_id)
+        .single();
+      bill.cards = card;
+    }
+
+    // Fetch related user data if exists
+    if (bill.uploaded_by) {
+      const { data: user } = await supabaseAdmin
+        .from('users')
+        .select('id, email')
+        .eq('id', bill.uploaded_by)
+        .single();
+      bill.users = user;
+    }
     
-    return data;
+    return bill;
   }
 
   static async createBill(data: any, userId: string) {
@@ -60,10 +115,10 @@ export class BillsService {
       vendor: data.vendor || data.vendor_name,
       amount: data.amount,
       description: data.description || '',
-      category_id: data.categoryId || data.category_id || null,
-      card_id: data.cardId || data.card_id || null,
+      expense_type: data.expenseType || data.expense_type || 'other',
+      linked_card_id: data.cardId || data.card_id || data.linked_card_id || null,
       status: data.status || 'pending',
-      created_by: userId,
+      uploaded_by: userId,
     };
 
     // Validate required fields
@@ -85,7 +140,7 @@ export class BillsService {
     }
     
     // If linked to a card, update card balance using RPC function
-    const cardId = data.cardId || data.card_id;
+    const cardId = data.cardId || data.card_id || data.linked_card_id;
     if (cardId) {
       const { error: rpcError } = await supabaseAdmin.rpc('increment_card_balance', {
         card_id_param: cardId,
@@ -121,11 +176,11 @@ export class BillsService {
     if (data.amount !== undefined) updateData.amount = data.amount;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.status !== undefined) updateData.status = data.status;
-    if (data.categoryId !== undefined || data.category_id !== undefined) {
-      updateData.category_id = data.categoryId !== undefined ? data.categoryId : data.category_id;
+    if (data.expenseType !== undefined || data.expense_type !== undefined) {
+      updateData.expense_type = data.expenseType !== undefined ? data.expenseType : data.expense_type;
     }
-    if (data.cardId !== undefined || data.card_id !== undefined) {
-      updateData.card_id = data.cardId !== undefined ? data.cardId : data.card_id;
+    if (data.cardId !== undefined || data.card_id !== undefined || data.linked_card_id !== undefined) {
+      updateData.linked_card_id = data.cardId !== undefined ? data.cardId : (data.card_id !== undefined ? data.card_id : data.linked_card_id);
     }
 
     const { data: updatedBill, error } = await supabaseAdmin
@@ -140,19 +195,19 @@ export class BillsService {
     }
 
     // Handle card balance updates
-    const newCardId = data.cardId !== undefined ? data.cardId : (data.card_id !== undefined ? data.card_id : undefined);
+    const newCardId = data.cardId !== undefined ? data.cardId : (data.card_id !== undefined ? data.card_id : (data.linked_card_id !== undefined ? data.linked_card_id : undefined));
     
     if (data.amount !== undefined || newCardId !== undefined) {
       // Remove old amount from old card
-      if (currentBill.card_id) {
+      if (currentBill.linked_card_id) {
         await supabaseAdmin.rpc('decrement_card_balance', {
-          card_id: currentBill.card_id,
+          card_id: currentBill.linked_card_id,
           amount: currentBill.amount
         });
       }
       
       // Add new amount to new card
-      const finalCardId = newCardId !== undefined ? newCardId : currentBill.card_id;
+      const finalCardId = newCardId !== undefined ? newCardId : currentBill.linked_card_id;
       const finalAmount = data.amount !== undefined ? data.amount : currentBill.amount;
       
       if (finalCardId) {
@@ -176,9 +231,9 @@ export class BillsService {
     const bill = await this.getBillById(id);
     
     // Remove amount from card balance if applicable
-    if (bill.card_id) {
+    if (bill.linked_card_id) {
       await supabaseAdmin.rpc('decrement_card_balance', {
-        card_id: bill.card_id,
+        card_id: bill.linked_card_id,
         amount: bill.amount
       });
     }

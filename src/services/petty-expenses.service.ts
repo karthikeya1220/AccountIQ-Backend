@@ -4,9 +4,9 @@ export interface PettyExpense {
   id: string;
   description: string;
   amount: number;
-  category_id?: string;
+  category?: string;
   expense_date: string;
-  created_by: string;
+  recorded_by: string;
   created_at: string;
   updated_at: string;
 }
@@ -14,14 +14,14 @@ export interface PettyExpense {
 export interface CreatePettyExpenseInput {
   description: string;
   amount: number;
-  category_id?: string;
+  category?: string;
   expense_date: string;
 }
 
 export interface UpdatePettyExpenseInput {
   description?: string;
   amount?: number;
-  category_id?: string;
+  category?: string;
   expense_date?: string;
 }
 
@@ -30,7 +30,7 @@ export class PettyExpensesService {
   async getAllExpenses(filters: {
     startDate?: string;
     endDate?: string;
-    categoryId?: string;
+    category?: string;
     userId?: string;
   } = {}): Promise<PettyExpense[]> {
     let query = supabaseAdmin
@@ -44,11 +44,11 @@ export class PettyExpensesService {
     if (filters.endDate) {
       query = query.lte('expense_date', filters.endDate);
     }
-    if (filters.categoryId) {
-      query = query.eq('category_id', filters.categoryId);
+    if (filters.category) {
+      query = query.eq('category', filters.category);
     }
     if (filters.userId) {
-      query = query.eq('created_by', filters.userId);
+      query = query.eq('recorded_by', filters.userId);
     }
 
     const { data, error } = await query;
@@ -86,7 +86,7 @@ export class PettyExpensesService {
   ): Promise<PettyExpense> {
     // Map frontend fields to database fields
     const dbExpenseData: any = {
-      created_by: userId,
+      recorded_by: userId,
     };
 
     // Handle description
@@ -104,22 +104,25 @@ export class PettyExpensesService {
       dbExpenseData.expense_date = expenseData.expense_date;
     }
 
-    // Handle category field - frontend might send 'category' (string) but DB expects 'category_id' (UUID)
-    // For now, we'll store the category as a string description in a notes field if it's not a UUID
+    // Handle category field - store as string in the category column
     if (expenseData.category) {
-      // Check if it's a valid UUID format
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (uuidRegex.test(expenseData.category)) {
-        dbExpenseData.category_id = expenseData.category;
-      }
-      // If it's a string category name, we'll ignore it since DB only has category_id (UUID)
-      // The category string will be in the description
-    } else if (expenseData.category_id) {
-      dbExpenseData.category_id = expenseData.category_id;
+      dbExpenseData.category = expenseData.category;
     }
 
-    // Note: is_approved is not in the database schema (migrations.ts), so we skip it
-    // If you need approval functionality, you'll need to add this column to the database first
+    // Handle vendor
+    if (expenseData.vendor) {
+      dbExpenseData.vendor = expenseData.vendor;
+    }
+
+    // Handle receipt_number
+    if (expenseData.receipt_number) {
+      dbExpenseData.receipt_number = expenseData.receipt_number;
+    }
+
+    // Handle notes
+    if (expenseData.notes) {
+      dbExpenseData.notes = expenseData.notes;
+    }
 
     const { data, error } = await supabaseAdmin
       .from('petty_expenses')
@@ -176,7 +179,7 @@ export class PettyExpensesService {
   async getMonthlySummary(month: string, year: string): Promise<{
     total: number;
     count: number;
-    byCategory: Array<{ category_id: string; total: number; count: number }>;
+    byCategory: Array<{ category: string; total: number; count: number }>;
   }> {
     const startDate = `${year}-${month.padStart(2, '0')}-01`;
     const endDate = `${year}-${month.padStart(2, '0')}-31`;
@@ -198,16 +201,16 @@ export class PettyExpensesService {
     // Group by category
     const categoryMap = new Map<string, { total: number; count: number }>();
     expenses.forEach((expense) => {
-      const categoryId = expense.category_id || 'uncategorized';
-      const existing = categoryMap.get(categoryId) || { total: 0, count: 0 };
-      categoryMap.set(categoryId, {
+      const category = expense.category || 'uncategorized';
+      const existing = categoryMap.get(category) || { total: 0, count: 0 };
+      categoryMap.set(category, {
         total: existing.total + Number(expense.amount),
         count: existing.count + 1,
       });
     });
 
-    const byCategory = Array.from(categoryMap.entries()).map(([category_id, stats]) => ({
-      category_id,
+    const byCategory = Array.from(categoryMap.entries()).map(([category, stats]) => ({
+      category,
       ...stats,
     }));
 

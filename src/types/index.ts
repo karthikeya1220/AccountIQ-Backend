@@ -1,90 +1,155 @@
+// ============================================================================
+// ENUMS & CONSTANTS
+// ============================================================================
+
 // User roles
 export enum UserRole {
   ADMIN = 'admin',
   USER = 'user',
 }
 
-// Expense categories
-export enum ExpenseCategory {
-  BILL = 'bill',
-  CARD = 'card',
-  CASH = 'cash',
-  SALARY = 'salary',
-  PETTY = 'petty',
+// Card types
+export enum CardType {
+  CREDIT = 'credit',
+  DEBIT = 'debit',
 }
+
+// Card status
+export enum CardStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  BLOCKED = 'blocked',
+  EXPIRED = 'expired',
+}
+
+// Transaction types
+export enum TransactionType {
+  DEBIT = 'debit',
+  CREDIT = 'credit',
+  REFUND = 'refund',
+}
+
+// Card transaction status
+export enum CardTransactionStatus {
+  PENDING = 'pending',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  CANCELLED = 'cancelled',
+}
+
+// Cash transaction types
+export enum CashTransactionType {
+  INFLOW = 'inflow',
+  OUTFLOW = 'outflow',
+}
+
+// Bill status
+export enum BillStatus {
+  PENDING = 'pending',
+  PAID = 'paid',
+  OVERDUE = 'overdue',
+  CANCELLED = 'cancelled',
+}
+
+// Expense types
+export enum ExpenseType {
+  OFFICE = 'office',
+  TRAVEL = 'travel',
+  SOFTWARE = 'software',
+  EQUIPMENT = 'equipment',
+  UTILITIES = 'utilities',
+  RENT = 'rent',
+  MAINTENANCE = 'maintenance',
+  OTHER = 'other',
+}
+
+// Salary status
+export enum SalaryStatus {
+  PENDING = 'pending',
+  PAID = 'paid',
+  CANCELLED = 'cancelled',
+}
+
+// Budget types
+export enum BudgetType {
+  MONTHLY = 'monthly',
+  QUARTERLY = 'quarterly',
+  YEARLY = 'yearly',
+  PROJECT = 'project',
+}
+
+// Budget status enum
+export enum BudgetStatusEnum {
+  ACTIVE = 'active',
+  COMPLETED = 'completed',
+  EXCEEDED = 'exceeded',
+  CANCELLED = 'cancelled',
+}
+
+// Reminder types
+export enum ReminderType {
+  BILL = 'bill',
+  EXPENSE = 'expense',
+  SALARY = 'salary',
+  BUDGET = 'budget',
+  CUSTOM = 'custom',
+}
+
+// Audit actions
+export enum AuditAction {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LOGIN = 'login',
+  LOGOUT = 'logout',
+}
+
+// ============================================================================
+// CORE INTERFACES
+// ============================================================================
 
 // User
 export interface User {
   id: string;
   email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
+  firstName: string | null;
+  lastName: string | null;
   role: UserRole;
-  departmentId?: string;
   isActive: boolean;
-  lastLoginAt?: Date;
+  phone: string | null;
+  department: string | null;
+  designation: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Session
+export interface Session {
+  id: string;
+  userId: string;
+  sessionToken: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  expiresAt: Date;
+  createdAt: Date;
+  lastActivity: Date;
 }
 
 // Employee
 export interface Employee {
   id: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
-  designation: string;
-  departmentId?: string;
-  baseSalary: number;
+  name: string;
+  email: string;
+  position: string | null;
+  department: string | null;
   joinDate: Date;
+  baseSalary: number;
   isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Bill
-export interface Bill {
-  id: string;
-  billDate: Date;
-  vendor: string;
-  amount: number;
-  description: string;
-  categoryId?: string;
-  attachmentUrl?: string;
-  attachmentType?: 'image' | 'pdf';
-  cardId?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdBy: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Card
-export interface Card {
-  id: string;
-  cardNumber: string;
-  cardHolder: string;
-  cardType: 'credit' | 'debit';
-  bank: string;
-  expiryDate: Date;
-  limit?: number;
-  balance: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Cash Transaction
-export interface CashTransaction {
-  id: string;
-  transactionDate: Date;
-  description: string;
-  amount: number;
-  transactionType: 'income' | 'expense';
-  categoryId?: string;
-  notes?: string;
-  createdBy: string;
+  phone: string | null;
+  address: string | null;
+  emergencyContact: string | null;
+  emergencyPhone: string | null;
+  createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -94,12 +159,95 @@ export interface Salary {
   id: string;
   employeeId: string;
   month: Date;
-  baseSalary: number;
-  allowances: number;
+  baseAmount: number;
+  bonuses: number;
   deductions: number;
-  netSalary: number;
-  status: 'pending' | 'approved' | 'paid';
-  paidDate?: Date;
+  netAmount: number; // Computed field
+  status: SalaryStatus;
+  paidDate: Date | null;
+  paymentMethod: string | null;
+  notes: string | null;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Card
+export interface Card {
+  id: string;
+  cardName: string;
+  cardNumber: string; // Last 4 digits only
+  holderName: string;
+  cardType: CardType;
+  expiryDate: string; // Format: MM/YYYY
+  balance: number;
+  creditLimit: number | null;
+  status: CardStatus;
+  isActive: boolean;
+  bankName: string | null;
+  notes: string | null;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Card Transaction
+export interface CardTransaction {
+  id: string;
+  cardId: string;
+  amount: number;
+  transactionType: TransactionType;
+  description: string;
+  transactionDate: Date;
+  category: string;
+  vendor: string | null;
+  status: CardTransactionStatus;
+  receiptUrl: string | null;
+  notes: string | null;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Cash Transaction
+export interface CashTransaction {
+  id: string;
+  transactionType: CashTransactionType;
+  amount: number;
+  description: string;
+  transactionDate: Date;
+  category: string;
+  vendor: string | null;
+  paymentMethod: string | null;
+  receiptNumber: string | null;
+  notes: string | null;
+  recordedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Bill
+export interface Bill {
+  id: string;
+  billNumber: string | null;
+  vendor: string;
+  billDate: Date;
+  dueDate: Date | null;
+  amount: number;
+  taxAmount: number;
+  totalAmount: number; // Computed field
+  description: string;
+  expenseType: ExpenseType;
+  status: BillStatus;
+  paymentDate: Date | null;
+  paymentMethod: string | null;
+  linkedCardId: string | null;
+  linkedCashTransactionId: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
+  notes: string | null;
+  userId: string | null; // For Supabase RLS
+  uploadedBy: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -109,9 +257,32 @@ export interface PettyExpense {
   id: string;
   description: string;
   amount: number;
-  categoryId?: string;
   expenseDate: Date;
-  createdBy: string;
+  category: string;
+  vendor: string | null;
+  receiptNumber: string | null;
+  notes: string | null;
+  recordedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Budget
+export interface Budget {
+  id: string;
+  name: string;
+  budgetType: BudgetType;
+  category: string;
+  periodStart: Date;
+  periodEnd: Date;
+  allocatedAmount: number;
+  spentAmount: number;
+  remainingAmount: number; // Computed field
+  alertThreshold: number; // Percentage (0-100)
+  status: BudgetStatusEnum;
+  cardId: string | null;
+  notes: string | null;
+  createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -120,44 +291,36 @@ export interface PettyExpense {
 export interface Reminder {
   id: string;
   title: string;
-  description?: string;
+  description: string | null;
   reminderDate: Date;
-  reminderTime: string;
-  type: 'bill' | 'expense' | 'salary' | 'custom';
-  relatedId?: string;
-  notificationMethods: ('email' | 'ui')[];
+  reminderTime: string | null;
+  reminderType: ReminderType;
+  relatedEntityType: string | null;
+  relatedEntityId: string | null;
+  notificationMethods: string[];
   recipients: string[];
   isActive: boolean;
+  isRecurring: boolean;
+  recurrencePattern: string | null;
+  lastSentAt: Date | null;
+  nextSendAt: Date | null;
+  createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Budget
-export interface Budget {
+// Audit Log
+export interface AuditLog {
   id: string;
-  categoryId: string;
-  categoryName: string;
-  limit: number;
-  spent: number;
-  period: 'monthly' | 'quarterly' | 'annual';
-  month?: Date;
-  isActive: boolean;
+  userId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  oldValues: Record<string, any> | null;
+  newValues: Record<string, any> | null;
+  ipAddress: string | null;
+  userAgent: string | null;
   createdAt: Date;
-  updatedAt: Date;
-}
-
-// Session
-export interface Session {
-  id: string;
-  userId: string;
-  token: string;
-  refreshToken?: string;
-  ipAddress: string;
-  userAgent: string;
-  expiresAt: Date;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 // API Response
@@ -267,7 +430,7 @@ export interface CardSummary {
   available: number;
 }
 
-export interface BudgetStatus {
+export interface BudgetStatusSummary {
   onTrack: number;
   warning: number;
   exceeded: number;
@@ -301,7 +464,7 @@ export interface DashboardSummaryData {
   recentTransactions: RecentTransaction[];
   alerts: DashboardAlerts;
   cards: CardSummary;
-  budgetStatus: BudgetStatus;
+  budgetStatus: BudgetStatusSummary;
   metadata: DashboardMetadata;
 }
 
